@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../models/block.dart';
 import '../models/board.dart';
 
@@ -24,8 +26,13 @@ class LineClearResult {
 class LineClear {
   final int boardWidth;
   final int boardHeight;
+  final Random _random;
 
-  LineClear({required this.boardWidth, required this.boardHeight});
+  LineClear({
+    required this.boardWidth,
+    required this.boardHeight,
+    Random? random,
+  }) : _random = random ?? Random();
 
   /// Returns updated blocks and lines cleared.
   LineClearResult clear(List<Block> blocks) {
@@ -82,30 +89,39 @@ class LineClear {
       }
     }
 
-    // 連結成分を求める（隣接する残りパーツは一体のブロックに）
+    // 連結成分を求める。同一 blockId かつ隣接するセルのみを連結（違うブロック由来は絶対にマージしない）
     final components = _findConnectedComponents(
-      remainingWithMeta.keys.toSet(),
+      remainingWithMeta,
       boardWidth,
       boardHeight,
     );
 
+    // 仲間が消えたブロックごとの断片数をカウント（2つ以上残った場合のみ色を変える）
+    final fragmentCountPerBlock = <String, int>{};
+    for (final component in components) {
+      if (component.isEmpty) continue;
+      final meta = remainingWithMeta[component.first]!;
+      if (clearedBlockIds.contains(meta.blockId)) {
+        fragmentCountPerBlock[meta.blockId] = (fragmentCountPerBlock[meta.blockId] ?? 0) + 1;
+      }
+    }
+
     // 各連結成分を Block に変換。
-    // 仲間が消えたブロックの残りパーツのみ：2つ目以降の色を変える。影響なしブロックはそのまま。
+    // 仲間が消えて残りが2つ以上ある場合のみ：別扱いのためそれぞれ独立した色を割り当て。
     var fragmentId = 0;
     final newBlocks = <Block>[];
-    final fragmentCountPerBlock = <String, int>{};
     const colorCount = 100;
-    const colorOffsets = [50, 25, 75, 17, 83, 33, 67, 42, 58, 8];
+    final usedColors = <int>{};
     for (final component in components) {
       if (component.isEmpty) continue;
       final firstCell = component.first;
       final meta = remainingWithMeta[firstCell]!;
-      final wasCleared = clearedBlockIds.contains(meta.blockId);
-      final count = fragmentCountPerBlock[meta.blockId] ?? 0;
-      fragmentCountPerBlock[meta.blockId] = count + 1;
-      final colorIndex = (!wasCleared || count == 0)
-          ? meta.colorIndex
-          : (meta.colorIndex + colorOffsets[count % colorOffsets.length]) % colorCount;
+      final needNewColor = clearedBlockIds.contains(meta.blockId) &&
+          (fragmentCountPerBlock[meta.blockId] ?? 0) >= 2;
+      final colorIndex = needNewColor
+          ? _pickDistinctColor(usedColors, colorCount)
+          : meta.colorIndex;
+      if (needNewColor) usedColors.add(colorIndex);
       newBlocks.add(Block.fromCells(
         blockId: 'frag_${meta.blockId}_$fragmentId',
         cells: component.toList(),
@@ -123,22 +139,35 @@ class LineClear {
     );
   }
 
-  /// 隣接セル（上下左右）で連結している成分に分ける
+  /// 既に使った色を避けて新しい色を選ぶ
+  int _pickDistinctColor(Set<int> used, int colorCount) {
+    if (used.length >= colorCount) return _random.nextInt(colorCount);
+    var c = _random.nextInt(colorCount);
+    while (used.contains(c)) {
+      c = (c + 1) % colorCount;
+    }
+    return c;
+  }
+
+  /// 同一 blockId かつ隣接するセルで連結成分に分ける。違うブロック由来は絶対にマージしない。
   List<Set<(int, int)>> _findConnectedComponents(
-    Set<(int, int)> cells,
+    Map<(int, int), ({String blockId, int colorIndex})> cellsWithMeta,
     int width,
     int height,
   ) {
+    final cells = cellsWithMeta.keys.toSet();
     final result = <Set<(int, int)>>[];
     final visited = <(int, int)>{};
     for (final start in cells) {
       if (visited.contains(start)) continue;
+      final meta = cellsWithMeta[start]!;
       final component = <(int, int)>{};
       final queue = [start];
       while (queue.isNotEmpty) {
         final (c, r) = queue.removeLast();
         if (visited.contains((c, r))) continue;
         if (!cells.contains((c, r))) continue;
+        if (cellsWithMeta[(c, r)]!.blockId != meta.blockId) continue;
         visited.add((c, r));
         component.add((c, r));
         for (final (dc, dr) in [(0, -1), (0, 1), (-1, 0), (1, 0)]) {

@@ -120,6 +120,30 @@ class Spawner {
     return false;
   }
 
+  /// 指定形状を [direction] から出現させられるか試す。置けるなら (newBlock, settled) を返す。
+  ({Block newBlock, Block settled})? trySpawnShapeAtEdge(
+    BlockShape shape,
+    SlideDirection direction,
+    Block Function(Block) slideNewBlock,
+    bool Function(Block) isFullyOnBoard,
+  ) {
+    final candidates = blocksAtEdgeForShape(shape, direction);
+    candidates.shuffle(_random);
+    for (final blockAtEdge in candidates) {
+      final newBlock = Block(
+        blockId: 'block_${DateTime.now().millisecondsSinceEpoch}',
+        shape: shape,
+        col: blockAtEdge.col,
+        row: blockAtEdge.row,
+      );
+      final settled = slideNewBlock(newBlock);
+      if (isFullyOnBoard(settled)) {
+        return (newBlock: newBlock, settled: settled);
+      }
+    }
+    return null;
+  }
+
   /// Tries to find a valid spawn for [direction]: shape + position where the block
   /// can fully enter the board. Returns (newBlock, settledBlock) or null if none.
   ({Block newBlock, Block settled})? trySpawnAtEdge(
@@ -148,47 +172,52 @@ class Spawner {
   }
 
   /// All valid edge spawn positions for a shape and direction.
-  /// Used for game over check (try all positions along the edge).
+  /// ブロックは入口エッジ上に全体を置き、スライドで盤内に進入する。
+  /// （ボード外から出すと、高さ・幅>1のブロックは「1マス移動で枠外セルが残る」ため衝突で止まる）
   List<Block> blocksAtEdgeForShape(BlockShape shape, SlideDirection direction) {
     final result = <Block>[];
     switch (direction) {
       case SlideDirection.right:
+        // 左端に配置し、右へスライド
         for (var row = 0; row <= boardHeight - shape.height; row++) {
           result.add(Block(
             blockId: '_check',
             shape: shape,
-            col: 1 - shape.width,
+            col: 0,
             row: row,
           ));
         }
         break;
       case SlideDirection.left:
+        // 右端に配置し、左へスライド
         for (var row = 0; row <= boardHeight - shape.height; row++) {
           result.add(Block(
             blockId: '_check',
             shape: shape,
-            col: boardWidth - 1,
+            col: boardWidth - shape.width,
             row: row,
           ));
         }
         break;
       case SlideDirection.down:
+        // 上端に配置し、下へスライド
         for (var col = 0; col <= boardWidth - shape.width; col++) {
           result.add(Block(
             blockId: '_check',
             shape: shape,
             col: col,
-            row: 1 - shape.height,
+            row: 0,
           ));
         }
         break;
       case SlideDirection.up:
+        // 下端に配置し、上へスライド
         for (var col = 0; col <= boardWidth - shape.width; col++) {
           result.add(Block(
             blockId: '_check',
             shape: shape,
             col: col,
-            row: boardHeight - 1,
+            row: boardHeight - shape.height,
           ));
         }
         break;

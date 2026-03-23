@@ -7,18 +7,6 @@ import '../providers/game_provider.dart';
 import '../widgets/direction_buttons.dart';
 import '../widgets/game_board.dart';
 
-class _SlideUp extends Intent {}
-class _SlideDown extends Intent {}
-class _SlideLeft extends Intent {}
-class _SlideRight extends Intent {}
-
-bool _canSlide(GameState s, SlideDirection dir) {
-  if (s.phase != GamePhase.playing) return false;
-  if (s.clearingCells.isNotEmpty || s.slideAnimations.isNotEmpty) return false;
-  if (s.lastSlideDirection != dir) return true;
-  return s.consecutiveSameDirectionCount < 2;
-}
-
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
 
@@ -30,6 +18,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = ref.read(gameProvider);
       if (state.phase == GamePhase.menu) {
@@ -39,69 +28,126 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final gameState = ref.read(gameProvider);
+    if (gameState.phase != GamePhase.playing) return false;
+    final notifier = ref.read(gameProvider.notifier);
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp && notifier.canSlideDirection(SlideDirection.up)) {
+      notifier.slide(SlideDirection.up);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown && notifier.canSlideDirection(SlideDirection.down)) {
+      notifier.slide(SlideDirection.down);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft && notifier.canSlideDirection(SlideDirection.left)) {
+      notifier.slide(SlideDirection.left);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight && notifier.canSlideDirection(SlideDirection.right)) {
+      notifier.slide(SlideDirection.right);
+      return true;
+    }
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
 
     if (gameState.phase == GamePhase.gameOver) {
-      return _GameOverOverlay(
-        score: gameState.score,
-        linesCleared: gameState.linesCleared,
-        onRestart: notifier.startGame,
+      return Scaffold(
+        body: Column(
+          children: [
+            _ScoreHeader(score: gameState.score),
+            Expanded(
+              child: _GameOverOverlay(
+                score: gameState.score,
+                linesCleared: gameState.linesCleared,
+                onRestart: notifier.startGame,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('GraviBlast'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(
-              child: Text(
-                'Score: ${gameState.score}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+      ),
+      body: Column(
+        children: [
+          _ScoreHeader(score: gameState.score),
+          Expanded(
+            child: _GameBody(notifier: notifier, gameState: gameState),
           ),
         ],
       ),
-      body: Focus(
-        autofocus: true,
-        child: Shortcuts(
-          shortcuts: {
-            SingleActivator(LogicalKeyboardKey.arrowUp): _SlideUp(),
-            SingleActivator(LogicalKeyboardKey.arrowDown): _SlideDown(),
-            SingleActivator(LogicalKeyboardKey.arrowLeft): _SlideLeft(),
-            SingleActivator(LogicalKeyboardKey.arrowRight): _SlideRight(),
-          },
-          child: Actions(
-            actions: {
-              _SlideUp: CallbackAction<_SlideUp>(onInvoke: (_) {
-                if (_canSlide(gameState, SlideDirection.up)) notifier.slide(SlideDirection.up);
-                return null;
-              }),
-              _SlideDown: CallbackAction<_SlideDown>(onInvoke: (_) {
-                if (_canSlide(gameState, SlideDirection.down)) notifier.slide(SlideDirection.down);
-                return null;
-              }),
-              _SlideLeft: CallbackAction<_SlideLeft>(onInvoke: (_) {
-                if (_canSlide(gameState, SlideDirection.left)) notifier.slide(SlideDirection.left);
-                return null;
-              }),
-              _SlideRight: CallbackAction<_SlideRight>(onInvoke: (_) {
-                if (_canSlide(gameState, SlideDirection.right)) notifier.slide(SlideDirection.right);
-                return null;
-              }),
-            },
-            child: SafeArea(
-              child: _GameBody(notifier: notifier, gameState: gameState),
+    );
+  }
+}
+
+class _ScoreHeader extends StatelessWidget {
+  final int score;
+
+  const _ScoreHeader({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.deepPurple.shade700,
+            Colors.deepPurple.shade400,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withValues(alpha: 0.5),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'POINTS',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.9),
+              letterSpacing: 4,
             ),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            '$score',
+            style: const TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 2,
+              shadows: [
+                Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4),
+                Shadow(color: Colors.white24, offset: Offset(-1, -1), blurRadius: 2),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -116,14 +162,6 @@ class _GameBody extends StatelessWidget {
     required this.gameState,
   });
 
-  bool _canSlideDirection(SlideDirection dir) {
-    if (gameState.clearingCells.isNotEmpty || gameState.slideAnimations.isNotEmpty) {
-      return false;
-    }
-    if (gameState.lastSlideDirection != dir) return true;
-    return gameState.consecutiveSameDirectionCount < 2;
-  }
-
   @override
   Widget build(BuildContext context) {
     final canSlide = gameState.clearingCells.isEmpty && gameState.slideAnimations.isEmpty;
@@ -131,9 +169,9 @@ class _GameBody extends StatelessWidget {
       onVerticalDragEnd: canSlide
           ? (details) {
               if (details.primaryVelocity == null) return;
-              if (details.primaryVelocity! < -100 && _canSlideDirection(SlideDirection.up)) {
+              if (details.primaryVelocity! < -100 && notifier.canSlideDirection(SlideDirection.up)) {
                 notifier.slide(SlideDirection.up);
-              } else if (details.primaryVelocity! > 100 && _canSlideDirection(SlideDirection.down)) {
+              } else if (details.primaryVelocity! > 100 && notifier.canSlideDirection(SlideDirection.down)) {
                 notifier.slide(SlideDirection.down);
               }
             }
@@ -141,22 +179,30 @@ class _GameBody extends StatelessWidget {
       onHorizontalDragEnd: canSlide
           ? (details) {
               if (details.primaryVelocity == null) return;
-              if (details.primaryVelocity! < -100 && _canSlideDirection(SlideDirection.left)) {
+              if (details.primaryVelocity! < -100 && notifier.canSlideDirection(SlideDirection.left)) {
                 notifier.slide(SlideDirection.left);
-              } else if (details.primaryVelocity! > 100 && _canSlideDirection(SlideDirection.right)) {
+              } else if (details.primaryVelocity! > 100 && notifier.canSlideDirection(SlideDirection.right)) {
                 notifier.slide(SlideDirection.right);
               }
             }
           : null,
-      child: LayoutBuilder(
-          builder: (context, constraints) {
-            const cellSize = 36.0;
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const boardCells = 8;
+                const minCellSize = 8.0;
+                const boardPadding = 16.0; // GameBoard padding (8*2)
+                final availableH = (constraints.maxHeight - boardPadding).clamp(0.0, double.infinity);
+                final availableW = (constraints.maxWidth - boardPadding).clamp(0.0, double.infinity);
+                final maxCellFromH = availableH / boardCells;
+                final maxCellFromW = availableW / boardCells;
+                final cellSize = (maxCellFromH < maxCellFromW ? maxCellFromH : maxCellFromW)
+                    .clamp(minCellSize, 36.0);
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(),
-                Center(
+                return Center(
                   child: GameBoard(
                     board: gameState.board,
                     blocks: gameState.blocks,
@@ -166,25 +212,23 @@ class _GameBody extends StatelessWidget {
                     clearingTriggerCols: gameState.clearingTriggerCols,
                     slideAnimations: gameState.slideAnimations,
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Lines: ${gameState.linesCleared}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                DirectionButtons(
-                  onDirection: (dir) => notifier.slide(dir),
-                  enabled: canSlide,
-                  isDirectionEnabled: (dir) {
-                    if (gameState.lastSlideDirection != dir) return true;
-                    return gameState.consecutiveSameDirectionCount < 2;
-                  },
-                ),
-              ],
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Lines: ${gameState.linesCleared}',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          DirectionButtons(
+            onDirection: (dir) => notifier.slide(dir),
+            nextBlockPerDirection: gameState.nextBlockPerDirection,
+            enabled: canSlide,
+            isDirectionEnabled: (dir) => notifier.canSlideDirection(dir),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -202,30 +246,28 @@ class _GameOverOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Game Over',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple,
-                    ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Game Over',
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
               ),
-              const SizedBox(height: 24),
-              Text('Score: $score'),
-              Text('Lines cleared: $linesCleared'),
-              const SizedBox(height: 32),
-              FilledButton(
-                onPressed: onRestart,
-                child: const Text('Play Again'),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            Text('Score: $score'),
+            Text('Lines cleared: $linesCleared'),
+            const SizedBox(height: 32),
+            FilledButton(
+              onPressed: onRestart,
+              child: const Text('Play Again'),
+            ),
+          ],
         ),
       ),
     );

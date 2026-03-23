@@ -23,6 +23,8 @@ class GameState {
   final List<Block> blocks;
   final int score;
   final int linesCleared;
+  /// スライド回数（10プレイごとに10点ボーナス用）
+  final int playCount;
   /// Cells currently animating the clear effect (fade out).
   final Set<(int, int)> clearingCells;
   /// 揃ったトリガー行（アニメ差別化用）
@@ -35,6 +37,8 @@ class GameState {
   final SlideDirection? lastSlideDirection;
   /// 同じ方向の連続回数
   final int consecutiveSameDirectionCount;
+  /// 各方向から次に出現するブロックの形
+  final Map<SlideDirection, BlockShape> nextBlockPerDirection;
 
   const GameState({
     required this.phase,
@@ -42,12 +46,14 @@ class GameState {
     required this.blocks,
     this.score = 0,
     this.linesCleared = 0,
+    this.playCount = 0,
     this.clearingCells = const {},
     this.clearingTriggerRows = const {},
     this.clearingTriggerCols = const {},
     this.slideAnimations = const {},
     this.lastSlideDirection,
     this.consecutiveSameDirectionCount = 0,
+    this.nextBlockPerDirection = const {},
   });
 
   GameState copyWith({
@@ -56,12 +62,14 @@ class GameState {
     List<Block>? blocks,
     int? score,
     int? linesCleared,
+    int? playCount,
     Set<(int, int)>? clearingCells,
     Set<int>? clearingTriggerRows,
     Set<int>? clearingTriggerCols,
     Map<String, ({int fromCol, int fromRow, int toCol, int toRow})>? slideAnimations,
     SlideDirection? lastSlideDirection,
     int? consecutiveSameDirectionCount,
+    Map<SlideDirection, BlockShape>? nextBlockPerDirection,
     bool clearSlideDirectionHistory = false,
   }) {
     return GameState(
@@ -70,12 +78,14 @@ class GameState {
       blocks: blocks ?? this.blocks,
       score: score ?? this.score,
       linesCleared: linesCleared ?? this.linesCleared,
+      playCount: clearSlideDirectionHistory ? 0 : (playCount ?? this.playCount),
       clearingCells: clearingCells ?? this.clearingCells,
       clearingTriggerRows: clearingTriggerRows ?? this.clearingTriggerRows,
       clearingTriggerCols: clearingTriggerCols ?? this.clearingTriggerCols,
       slideAnimations: slideAnimations ?? this.slideAnimations,
       lastSlideDirection: clearSlideDirectionHistory ? null : (lastSlideDirection ?? this.lastSlideDirection),
       consecutiveSameDirectionCount: clearSlideDirectionHistory ? 0 : (consecutiveSameDirectionCount ?? this.consecutiveSameDirectionCount),
+      nextBlockPerDirection: nextBlockPerDirection ?? this.nextBlockPerDirection,
     );
   }
 
