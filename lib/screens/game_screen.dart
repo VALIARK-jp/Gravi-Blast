@@ -224,6 +224,7 @@ class _GameBody extends StatelessWidget {
           DirectionButtons(
             onDirection: (dir) => notifier.slide(dir),
             nextBlockPerDirection: gameState.nextBlockPerDirection,
+            nextBlockColorPerDirection: gameState.nextBlockColorPerDirection,
             enabled: canSlide,
             isDirectionEnabled: (dir) => notifier.canSlideDirection(dir),
           ),

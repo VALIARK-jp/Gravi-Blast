@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/block.dart';
 import '../models/game_state.dart';
@@ -8,22 +9,18 @@ class DirectionButtons extends StatelessWidget {
   final bool enabled;
   final bool Function(SlideDirection)? isDirectionEnabled;
   final Map<SlideDirection, BlockShape> nextBlockPerDirection;
+  final Map<SlideDirection, int> nextBlockColorPerDirection;
 
   const DirectionButtons({
     super.key,
     required this.onDirection,
     required this.nextBlockPerDirection,
+    required this.nextBlockColorPerDirection,
     this.enabled = true,
     this.isDirectionEnabled,
   });
 
   static const _buttonSize = 56.0;
-  static const _colors = [
-    Color(0xFF6B4EFF),
-    Color(0xFF4ECDC4),
-    Color(0xFFE056FD),
-    Color(0xFF45B7D1),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +37,7 @@ class DirectionButtons extends StatelessWidget {
           const SizedBox(height: 8),
           _buildRow([
             _buildButton(SlideDirection.left, 1),
-            null,
+            _buildCenterLogo(),
             _buildButton(SlideDirection.right, 2),
           ]),
           const SizedBox(height: 8),
@@ -67,7 +64,8 @@ class DirectionButtons extends StatelessWidget {
     final directionOk = isDirectionEnabled?.call(direction) ?? true;
     final canTap = enabled && directionOk;
     final shape = nextBlockPerDirection[direction];
-    final color = canTap ? _colors[colorIndex % _colors.length] : Colors.grey;
+    final colorIndexForDirection = nextBlockColorPerDirection[direction] ?? colorIndex;
+    final color = canTap ? _colorFromIndex(colorIndexForDirection) : Colors.grey;
     return Padding(
       padding: const EdgeInsets.all(4),
       child: Material(
@@ -92,6 +90,25 @@ class DirectionButtons extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildCenterLogo() {
+    return SizedBox(
+      width: _buttonSize,
+      height: _buttonSize,
+      child: Center(
+        child: SvgPicture.asset(
+          'lib/assets/valiark.svg',
+          width: 50,
+          height: 50,
+        ),
+      ),
+    );
+  }
+
+  Color _colorFromIndex(int index) {
+    final hue = (index % 100) * 3.6;
+    return HSLColor.fromAHSL(1.0, hue, 0.75, 0.55).toColor();
   }
 }
 

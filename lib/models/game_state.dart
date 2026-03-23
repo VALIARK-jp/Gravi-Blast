@@ -39,6 +39,8 @@ class GameState {
   final int consecutiveSameDirectionCount;
   /// 各方向から次に出現するブロックの形
   final Map<SlideDirection, BlockShape> nextBlockPerDirection;
+  /// 各方向から次に出現するブロックの色インデックス（0〜99）
+  final Map<SlideDirection, int> nextBlockColorPerDirection;
 
   const GameState({
     required this.phase,
@@ -54,6 +56,7 @@ class GameState {
     this.lastSlideDirection,
     this.consecutiveSameDirectionCount = 0,
     this.nextBlockPerDirection = const {},
+    this.nextBlockColorPerDirection = const {},
   });
 
   GameState copyWith({
@@ -70,6 +73,7 @@ class GameState {
     SlideDirection? lastSlideDirection,
     int? consecutiveSameDirectionCount,
     Map<SlideDirection, BlockShape>? nextBlockPerDirection,
+    Map<SlideDirection, int>? nextBlockColorPerDirection,
     bool clearSlideDirectionHistory = false,
   }) {
     return GameState(
@@ -86,6 +90,7 @@ class GameState {
       lastSlideDirection: clearSlideDirectionHistory ? null : (lastSlideDirection ?? this.lastSlideDirection),
       consecutiveSameDirectionCount: clearSlideDirectionHistory ? 0 : (consecutiveSameDirectionCount ?? this.consecutiveSameDirectionCount),
       nextBlockPerDirection: nextBlockPerDirection ?? this.nextBlockPerDirection,
+      nextBlockColorPerDirection: nextBlockColorPerDirection ?? this.nextBlockColorPerDirection,
     );
   }
 
