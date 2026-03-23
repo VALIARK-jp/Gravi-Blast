@@ -20,23 +20,35 @@ class LeaderboardScoreHeader extends ConsumerWidget {
     final allAsync = ref.watch(allTimeLeaderboardProvider);
     final dailyAsync = ref.watch(todayDailyLeaderboardProvider);
     final theme = Theme.of(context);
+    final w = MediaQuery.sizeOf(context).width;
+    final compact = w < 520;
+    final topPad = compact ? 28.0 : 48.0;
+    final scoreFont = compact ? 30.0 : 48.0;
 
     final titleStyle = theme.textTheme.labelSmall?.copyWith(
       color: Colors.black54,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.2,
+      fontSize: compact ? 9 : null,
     );
     final nameStyle = theme.textTheme.bodySmall?.copyWith(
       color: Colors.black87,
       fontWeight: FontWeight.w500,
+      fontSize: compact ? 10 : null,
     );
     final bestScoreStyle = theme.textTheme.titleSmall?.copyWith(
       color: Colors.black87,
       fontWeight: FontWeight.w700,
+      fontSize: compact ? 12 : null,
     );
 
     return Padding(
-      padding: const EdgeInsets.only(top: 48, bottom: 12, left: 12, right: 12),
+      padding: EdgeInsets.only(
+        top: MediaQuery.paddingOf(context).top + topPad,
+        bottom: compact ? 8 : 12,
+        left: compact ? 6 : 12,
+        right: compact ? 6 : 12,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -58,20 +70,21 @@ class LeaderboardScoreHeader extends ConsumerWidget {
               children: [
                 Text(
                   '$currentScore',
-                  style: const TextStyle(
-                    fontSize: 48,
+                  style: TextStyle(
+                    fontSize: scoreFont,
                     fontWeight: FontWeight.w900,
                     color: Colors.black,
-                    letterSpacing: 2,
+                    letterSpacing: compact ? 1 : 2,
                     height: 1.0,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: compact ? 4 : 8),
                 Text(
                   'Lines: $linesCleared',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: Colors.black87,
+                    fontSize: compact ? 13 : null,
                   ),
                   textAlign: TextAlign.center,
                 ),

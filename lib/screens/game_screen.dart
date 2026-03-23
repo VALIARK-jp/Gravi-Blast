@@ -103,7 +103,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             linesCleared: gameState.linesCleared,
           ),
           Expanded(
-            child: _GameBody(notifier: notifier, gameState: gameState),
+            child: _GameBody(
+              notifier: notifier,
+              gameState: gameState,
+            ),
           ),
         ],
       ),
@@ -133,7 +136,7 @@ class _ScoreHeader extends StatelessWidget {
   }
 }
 
-class _GameBody extends StatelessWidget {
+class _GameBody extends StatefulWidget {
   final dynamic notifier;
   final GameState gameState;
 
@@ -143,29 +146,97 @@ class _GameBody extends StatelessWidget {
   });
 
   @override
+  State<_GameBody> createState() => _GameBodyState();
+}
+
+class _GameBodyState extends State<_GameBody> {
+  /// スワイプ中の累積移動量（ゆっくりドラッグでも反応するため）
+  Offset _panDelta = Offset.zero;
+
+  bool get _canSlide =>
+      widget.gameState.clearingCells.isEmpty && widget.gameState.slideAnimations.isEmpty;
+
+  void _onPanEnd(DragEndDetails details) {
+    if (!_canSlide) return;
+
+    final v = details.velocity.pixelsPerSecond;
+    // フリック: 速度が十分あるときは速度ベクトルで判定
+    const velocityFling = 200.0;
+    // ゆっくりスワイプ: 距離で判定
+    const distanceSwipe = 30.0;
+    const axisRatio = 1.15;
+    const velAxis = 130.0;
+    const distAxis = 22.0;
+
+    double dx;
+    double dy;
+    final useVelocity = v.distance >= velocityFling;
+
+    if (useVelocity) {
+      dx = v.dx;
+      dy = v.dy;
+    } else {
+      dx = _panDelta.dx;
+      dy = _panDelta.dy;
+      if (Offset(dx, dy).distance < distanceSwipe) return;
+    }
+
+    final absX = dx.abs();
+    final absY = dy.abs();
+
+    void trySlide(SlideDirection d) {
+      if (widget.notifier.canSlideDirection(d)) {
+        widget.notifier.slide(d);
+      }
+    }
+
+    if (absX > absY * axisRatio) {
+      if (useVelocity) {
+        if (dx < -velAxis) {
+          trySlide(SlideDirection.left);
+        } else if (dx > velAxis) {
+          trySlide(SlideDirection.right);
+        }
+      } else {
+        if (dx < -distAxis) {
+          trySlide(SlideDirection.left);
+        } else if (dx > distAxis) {
+          trySlide(SlideDirection.right);
+        }
+      }
+    } else if (absY > absX * axisRatio) {
+      if (useVelocity) {
+        if (dy < -velAxis) {
+          trySlide(SlideDirection.up);
+        } else if (dy > velAxis) {
+          trySlide(SlideDirection.down);
+        }
+      } else {
+        if (dy < -distAxis) {
+          trySlide(SlideDirection.up);
+        } else if (dy > distAxis) {
+          trySlide(SlideDirection.down);
+        }
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final canSlide = gameState.clearingCells.isEmpty && gameState.slideAnimations.isEmpty;
+    final canSlide = _canSlide;
     return GestureDetector(
-      onVerticalDragEnd: canSlide
-          ? (details) {
-              if (details.primaryVelocity == null) return;
-              if (details.primaryVelocity! < -100 && notifier.canSlideDirection(SlideDirection.up)) {
-                notifier.slide(SlideDirection.up);
-              } else if (details.primaryVelocity! > 100 && notifier.canSlideDirection(SlideDirection.down)) {
-                notifier.slide(SlideDirection.down);
-              }
+      behavior: HitTestBehavior.opaque,
+      onPanStart: canSlide
+          ? (_) {
+              _panDelta = Offset.zero;
             }
           : null,
-      onHorizontalDragEnd: canSlide
+      onPanUpdate: canSlide
           ? (details) {
-              if (details.primaryVelocity == null) return;
-              if (details.primaryVelocity! < -100 && notifier.canSlideDirection(SlideDirection.left)) {
-                notifier.slide(SlideDirection.left);
-              } else if (details.primaryVelocity! > 100 && notifier.canSlideDirection(SlideDirection.right)) {
-                notifier.slide(SlideDirection.right);
-              }
+              _panDelta += details.delta;
             }
           : null,
+      onPanEnd: canSlide ? _onPanEnd : null,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -174,27 +245,31 @@ class _GameBody extends StatelessWidget {
               builder: (context, constraints) {
                 const boardCells = 8;
                 const minCellSize = 8.0;
-                const maxCellSize = 48.0;
-                const boardPadding = 16.0; // GameBoard padding (8*2)
-                /// 盤面を少し下にずらす（セルサイズは維持、Align で位置のみ調整）
-                const boardVerticalAlign = 0.18;
-                final availableH = (constraints.maxHeight - boardPadding).clamp(0.0, double.infinity);
-                final availableW = (constraints.maxWidth - boardPadding).clamp(0.0, double.infinity);
+                // 盤面は左右の余白のみ（GameBoard 内パディング 8*2 に合わせて控えめに）
+                const horizontalMargin = 8.0;
+                const verticalMargin = 4.0;
+                /// 狭い画面では縦方向の余白を減らし、盤面を大きく見せる
+                const boardVerticalAlign = 0.0;
+                final availableH =
+                    (constraints.maxHeight - verticalMargin * 2).clamp(0.0, double.infinity);
+                final availableW =
+                    (constraints.maxWidth - horizontalMargin * 2).clamp(0.0, double.infinity);
                 final maxCellFromH = availableH / boardCells;
                 final maxCellFromW = availableW / boardCells;
+                // 横幅いっぱいに近づける（高さが足りないときだけ縮小）。超大画面では上限を付与。
                 final cellSize = (maxCellFromH < maxCellFromW ? maxCellFromH : maxCellFromW)
-                    .clamp(minCellSize, maxCellSize);
+                    .clamp(minCellSize, 88.0);
 
                 return Align(
                   alignment: const Alignment(0, boardVerticalAlign),
                   child: GameBoard(
-                    board: gameState.board,
-                    blocks: gameState.blocks,
+                    board: widget.gameState.board,
+                    blocks: widget.gameState.blocks,
                     cellSize: cellSize,
-                    clearingCells: gameState.clearingCells,
-                    clearingTriggerRows: gameState.clearingTriggerRows,
-                    clearingTriggerCols: gameState.clearingTriggerCols,
-                    slideAnimations: gameState.slideAnimations,
+                    clearingCells: widget.gameState.clearingCells,
+                    clearingTriggerRows: widget.gameState.clearingTriggerRows,
+                    clearingTriggerCols: widget.gameState.clearingTriggerCols,
+                    slideAnimations: widget.gameState.slideAnimations,
                   ),
                 );
               },
@@ -202,11 +277,11 @@ class _GameBody extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DirectionButtons(
-            onDirection: (dir) => notifier.slide(dir),
-            nextBlockPerDirection: gameState.nextBlockPerDirection,
-            nextBlockColorPerDirection: gameState.nextBlockColorPerDirection,
+            onDirection: (dir) => widget.notifier.slide(dir),
+            nextBlockPerDirection: widget.gameState.nextBlockPerDirection,
+            nextBlockColorPerDirection: widget.gameState.nextBlockColorPerDirection,
             enabled: canSlide,
-            isDirectionEnabled: (dir) => notifier.canSlideDirection(dir),
+            isDirectionEnabled: (dir) => widget.notifier.canSlideDirection(dir),
           ),
         ],
       ),

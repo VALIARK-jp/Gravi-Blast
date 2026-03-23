@@ -20,76 +20,96 @@ class DirectionButtons extends StatelessWidget {
     this.isDirectionEnabled,
   });
 
-  /// 全体を約130%に拡大
-  static const _scale = 1.3;
-  static const _buttonSize = 56.0 * _scale;
-  static const _logoSize = 50.0 * _scale;
-  static const _outerPadding = 24.0 * _scale;
-  static const _rowGap = 8.0 * _scale;
-  static const _buttonPadding = 4.0 * _scale;
-  static const _cornerRadius = 12.0 * _scale;
+  /// 基準スケール（タブレット以上）。スマホ Web では [_responsiveScale] で縮小する。
+  static const _baseScale = 1.3;
+
+  /// 狭い画面ではやや縮小するが、タップしやすい下限を確保する。
+  static double _responsiveScale(double screenWidth) {
+    if (screenWidth < 400) return 0.64;
+    if (screenWidth < 520) return 0.76;
+    if (screenWidth < 640) return 0.86;
+    return 1.0;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    final r = _responsiveScale(w);
+    final s = _baseScale * r;
+    final buttonSize = 56.0 * s;
+    final logoSize = 50.0 * s;
+    final outerPadding = 24.0 * s;
+    final rowGap = 8.0 * s;
+    final buttonPadding = 4.0 * s;
+    final cornerRadius = 12.0 * s;
+
     return Padding(
-      padding: EdgeInsets.all(_outerPadding),
+      padding: EdgeInsets.fromLTRB(outerPadding * 0.5, 4, outerPadding * 0.5, outerPadding * 0.35),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildRow([
             null,
-            _buildButton(SlideDirection.up, 0),
+            _buildButton(SlideDirection.up, 0, buttonSize, buttonPadding, cornerRadius, r, s),
             null,
-          ]),
-          SizedBox(height: _rowGap),
+          ], buttonSize),
+          SizedBox(height: rowGap),
           _buildRow([
-            _buildButton(SlideDirection.left, 1),
-            _buildCenterLogo(),
-            _buildButton(SlideDirection.right, 2),
-          ]),
-          SizedBox(height: _rowGap),
+            _buildButton(SlideDirection.left, 1, buttonSize, buttonPadding, cornerRadius, r, s),
+            _buildCenterLogo(logoSize, buttonSize),
+            _buildButton(SlideDirection.right, 2, buttonSize, buttonPadding, cornerRadius, r, s),
+          ], buttonSize),
+          SizedBox(height: rowGap),
           _buildRow([
             null,
-            _buildButton(SlideDirection.down, 3),
+            _buildButton(SlideDirection.down, 3, buttonSize, buttonPadding, cornerRadius, r, s),
             null,
-          ]),
+          ], buttonSize),
         ],
       ),
     );
   }
 
-  Widget _buildRow(List<Widget?> children) {
+  Widget _buildRow(List<Widget?> children, double buttonSize) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: children
-          .map((w) => w ?? SizedBox(width: _buttonSize, height: _buttonSize))
+          .map((w) => w ?? SizedBox(width: buttonSize, height: buttonSize))
           .toList(),
     );
   }
 
-  Widget _buildButton(SlideDirection direction, int colorIndex) {
+  Widget _buildButton(
+    SlideDirection direction,
+    int colorIndex,
+    double buttonSize,
+    double buttonPadding,
+    double cornerRadius,
+    double responsiveScale,
+    double combinedScale,
+  ) {
     final directionOk = isDirectionEnabled?.call(direction) ?? true;
     final canTap = enabled && directionOk;
     final shape = nextBlockPerDirection[direction];
     final colorIndexForDirection = nextBlockColorPerDirection[direction] ?? colorIndex;
     final color = canTap ? _colorFromIndex(colorIndexForDirection) : Colors.grey;
     return Padding(
-      padding: EdgeInsets.all(_buttonPadding),
+      padding: EdgeInsets.all(buttonPadding),
       child: Material(
         color: canTap ? color.withValues(alpha: 0.3) : Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(_cornerRadius),
-        elevation: 4,
+        borderRadius: BorderRadius.circular(cornerRadius),
+        elevation: responsiveScale < 0.75 ? 2 : 4,
         child: InkWell(
           onTap: canTap ? () => onDirection(direction) : null,
-          borderRadius: BorderRadius.circular(_cornerRadius),
+          borderRadius: BorderRadius.circular(cornerRadius),
           child: SizedBox(
-            width: _buttonSize,
-            height: _buttonSize,
+            width: buttonSize,
+            height: buttonSize,
             child: shape != null
                 ? Opacity(
                     opacity: canTap ? 1.0 : 0.5,
                     child: Center(
-                      child: _ShapePreview(shape: shape, color: color),
+                      child: _ShapePreview(shape: shape, color: color, combinedScale: combinedScale),
                     ),
                   )
                 : const SizedBox(),
@@ -99,15 +119,15 @@ class DirectionButtons extends StatelessWidget {
     );
   }
 
-  Widget _buildCenterLogo() {
+  Widget _buildCenterLogo(double logoSize, double buttonSize) {
     return SizedBox(
-      width: _buttonSize,
-      height: _buttonSize,
+      width: buttonSize,
+      height: buttonSize,
       child: Center(
         child: SvgPicture.asset(
           'lib/assets/valiark.svg',
-          width: _logoSize,
-          height: _logoSize,
+          width: logoSize,
+          height: logoSize,
         ),
       ),
     );
@@ -122,22 +142,26 @@ class DirectionButtons extends StatelessWidget {
 class _ShapePreview extends StatelessWidget {
   final BlockShape shape;
   final Color color;
+  final double combinedScale;
 
-  const _ShapePreview({required this.shape, required this.color});
-
-  static const _maxSize = 44.0 * DirectionButtons._scale;
+  const _ShapePreview({
+    required this.shape,
+    required this.color,
+    required this.combinedScale,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final maxSize = 44.0 * combinedScale;
     final maxDim = shape.width > shape.height ? shape.width : shape.height;
     final cellSize = (maxDim > 0)
-        ? (_maxSize / maxDim).clamp(6.0 * DirectionButtons._scale, 10.0 * DirectionButtons._scale)
-        : 10.0 * DirectionButtons._scale;
+        ? (maxSize / maxDim).clamp(6.0 * combinedScale, 10.0 * combinedScale)
+        : 10.0 * combinedScale;
     final contentWidth = shape.width * (cellSize + 2); // cell + margin
     final contentHeight = shape.height * (cellSize + 2);
     return SizedBox(
-      width: _maxSize,
-      height: _maxSize,
+      width: maxSize,
+      height: maxSize,
       child: FittedBox(
         fit: BoxFit.contain,
         child: SizedBox(
