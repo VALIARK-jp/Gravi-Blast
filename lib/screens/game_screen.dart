@@ -6,6 +6,8 @@ import '../models/game_state.dart';
 import '../providers/game_provider.dart';
 import '../widgets/direction_buttons.dart';
 import '../widgets/game_board.dart';
+import '../widgets/game_over_leaderboard.dart';
+import '../widgets/leaderboard_header_row.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
@@ -62,6 +64,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final gameState = ref.watch(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
 
+    ref.listen<GameState>(gameProvider, (previous, next) {
+      if (next.phase == GamePhase.gameOver && previous?.phase != GamePhase.gameOver) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!context.mounted) return;
+          await submitGameOverLeaderboardIfNeeded(context, ref, next.score);
+        });
+      }
+    });
+
     if (gameState.phase == GamePhase.gameOver) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -114,28 +125,9 @@ class _ScoreHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: Colors.white,
-      padding: const EdgeInsets.only(top: 48, bottom: 12, left: 24, right: 24),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$score',
-            style: const TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Lines: $linesCleared',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.black87,
-                ),
-          ),
-        ],
+      child: LeaderboardScoreHeader(
+        currentScore: score,
+        linesCleared: linesCleared,
       ),
     );
   }

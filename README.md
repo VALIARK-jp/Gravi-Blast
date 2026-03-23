@@ -2,6 +2,10 @@
 
 A new Flutter project.
 
+## Firebase
+
+ランキング等で使う場合は、実プロジェクトに接続する手順を **[docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)** にまとめています。
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

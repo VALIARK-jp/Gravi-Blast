@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "775681177017",
+    "project_id": "graviblast-6723f",
+    "storage_bucket": "graviblast-6723f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:775681177017:android:230afcac4c9a702c587268",
+        "android_client_info": {
+          "package_name": "com.graviblast.graviblast"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaZdwO-rEAPTvbjycEJgCZtIfd-DcPY8Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
