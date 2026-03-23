@@ -20,12 +20,19 @@ class DirectionButtons extends StatelessWidget {
     this.isDirectionEnabled,
   });
 
-  static const _buttonSize = 56.0;
+  /// 全体を約130%に拡大
+  static const _scale = 1.3;
+  static const _buttonSize = 56.0 * _scale;
+  static const _logoSize = 50.0 * _scale;
+  static const _outerPadding = 24.0 * _scale;
+  static const _rowGap = 8.0 * _scale;
+  static const _buttonPadding = 4.0 * _scale;
+  static const _cornerRadius = 12.0 * _scale;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(_outerPadding),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -34,13 +41,13 @@ class DirectionButtons extends StatelessWidget {
             _buildButton(SlideDirection.up, 0),
             null,
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: _rowGap),
           _buildRow([
             _buildButton(SlideDirection.left, 1),
             _buildCenterLogo(),
             _buildButton(SlideDirection.right, 2),
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: _rowGap),
           _buildRow([
             null,
             _buildButton(SlideDirection.down, 3),
@@ -55,7 +62,7 @@ class DirectionButtons extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: children
-          .map((w) => w ?? const SizedBox(width: _buttonSize, height: _buttonSize))
+          .map((w) => w ?? SizedBox(width: _buttonSize, height: _buttonSize))
           .toList(),
     );
   }
@@ -67,14 +74,14 @@ class DirectionButtons extends StatelessWidget {
     final colorIndexForDirection = nextBlockColorPerDirection[direction] ?? colorIndex;
     final color = canTap ? _colorFromIndex(colorIndexForDirection) : Colors.grey;
     return Padding(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(_buttonPadding),
       child: Material(
         color: canTap ? color.withValues(alpha: 0.3) : Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(_cornerRadius),
         elevation: 4,
         child: InkWell(
           onTap: canTap ? () => onDirection(direction) : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(_cornerRadius),
           child: SizedBox(
             width: _buttonSize,
             height: _buttonSize,
@@ -99,8 +106,8 @@ class DirectionButtons extends StatelessWidget {
       child: Center(
         child: SvgPicture.asset(
           'lib/assets/valiark.svg',
-          width: 50,
-          height: 50,
+          width: _logoSize,
+          height: _logoSize,
         ),
       ),
     );
@@ -118,12 +125,14 @@ class _ShapePreview extends StatelessWidget {
 
   const _ShapePreview({required this.shape, required this.color});
 
-  static const _maxSize = 44.0;
+  static const _maxSize = 44.0 * DirectionButtons._scale;
 
   @override
   Widget build(BuildContext context) {
     final maxDim = shape.width > shape.height ? shape.width : shape.height;
-    final cellSize = (maxDim > 0) ? (_maxSize / maxDim).clamp(6.0, 10.0) : 10.0;
+    final cellSize = (maxDim > 0)
+        ? (_maxSize / maxDim).clamp(6.0 * DirectionButtons._scale, 10.0 * DirectionButtons._scale)
+        : 10.0 * DirectionButtons._scale;
     final contentWidth = shape.width * (cellSize + 2); // cell + margin
     final contentHeight = shape.height * (cellSize + 2);
     return SizedBox(

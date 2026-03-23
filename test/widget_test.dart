@@ -12,7 +12,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('GraviBlast'), findsOneWidget);
-    expect(find.textContaining('POINTS'), findsOneWidget);
+    expect(find.text('0'), findsWidgets);
+    expect(find.textContaining('Lines:'), findsOneWidget);
   });
 }

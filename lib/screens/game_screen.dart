@@ -64,9 +64,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (gameState.phase == GamePhase.gameOver) {
       return Scaffold(
+        backgroundColor: Colors.white,
         body: Column(
           children: [
-            _ScoreHeader(score: gameState.score),
+            _ScoreHeader(
+              score: gameState.score,
+              linesCleared: gameState.linesCleared,
+            ),
             Expanded(
               child: _GameOverOverlay(
                 score: gameState.score,
@@ -80,12 +84,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('GraviBlast'),
-      ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          _ScoreHeader(score: gameState.score),
+          _ScoreHeader(
+            score: gameState.score,
+            linesCleared: gameState.linesCleared,
+          ),
           Expanded(
             child: _GameBody(notifier: notifier, gameState: gameState),
           ),
@@ -97,55 +102,38 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
 class _ScoreHeader extends StatelessWidget {
   final int score;
+  final int linesCleared;
 
-  const _ScoreHeader({required this.score});
+  const _ScoreHeader({
+    required this.score,
+    required this.linesCleared,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.deepPurple.shade700,
-            Colors.deepPurple.shade400,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.deepPurple.withValues(alpha: 0.5),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      color: Colors.white,
+      padding: const EdgeInsets.only(top: 48, bottom: 12, left: 24, right: 24),
+      alignment: Alignment.center,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'POINTS',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.9),
-              letterSpacing: 4,
-            ),
-          ),
-          const SizedBox(height: 4),
           Text(
             '$score',
             style: const TextStyle(
               fontSize: 48,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: Colors.black,
               letterSpacing: 2,
-              shadows: [
-                Shadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 4),
-                Shadow(color: Colors.white24, offset: Offset(-1, -1), blurRadius: 2),
-              ],
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Lines: $linesCleared',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.black87,
+                ),
           ),
         ],
       ),
@@ -194,15 +182,19 @@ class _GameBody extends StatelessWidget {
               builder: (context, constraints) {
                 const boardCells = 8;
                 const minCellSize = 8.0;
+                const maxCellSize = 48.0;
                 const boardPadding = 16.0; // GameBoard padding (8*2)
+                /// 盤面を少し下にずらす（セルサイズは維持、Align で位置のみ調整）
+                const boardVerticalAlign = 0.18;
                 final availableH = (constraints.maxHeight - boardPadding).clamp(0.0, double.infinity);
                 final availableW = (constraints.maxWidth - boardPadding).clamp(0.0, double.infinity);
                 final maxCellFromH = availableH / boardCells;
                 final maxCellFromW = availableW / boardCells;
                 final cellSize = (maxCellFromH < maxCellFromW ? maxCellFromH : maxCellFromW)
-                    .clamp(minCellSize, 36.0);
+                    .clamp(minCellSize, maxCellSize);
 
-                return Center(
+                return Align(
+                  alignment: const Alignment(0, boardVerticalAlign),
                   child: GameBoard(
                     board: gameState.board,
                     blocks: gameState.blocks,
@@ -216,11 +208,7 @@ class _GameBody extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Lines: ${gameState.linesCleared}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          const SizedBox(height: 8),
           DirectionButtons(
             onDirection: (dir) => notifier.slide(dir),
             nextBlockPerDirection: gameState.nextBlockPerDirection,
