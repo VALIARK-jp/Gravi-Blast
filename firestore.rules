@@ -6,5 +6,8 @@ service cloud.firestore {
     match /leaderboard/{docId} {
       allow read, write: if true;
     }
+    match /leaderboard_history/{docId} {
+      allow read, write: if true;
+    }
   }
 }

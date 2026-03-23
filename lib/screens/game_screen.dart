@@ -316,7 +316,19 @@ class _GameOverOverlay extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Score: $score'),
+            SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  'Score: $score',
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
             Text('Lines cleared: $linesCleared'),
             const SizedBox(height: 32),
             FilledButton(

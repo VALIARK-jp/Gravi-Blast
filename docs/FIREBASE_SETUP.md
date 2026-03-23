@@ -74,8 +74,11 @@ Firestore のフィールド名・型・ニックネームの整形は **`lib/da
 |-------------|-----------------|------------|
 | `leaderboard` | `all_time` | `score` (int), `nickname` (string), `updatedAt` (timestamp) |
 | `leaderboard` | `daily_YYYY-MM-DD`（JST） | 同上 |
+| `leaderboard_history` | （自動 ID） | 通算／日次の **ベストが更新されたとき**に 1 件追加。`kind` (`all_time` / `daily`), `score`, `nickname`, `createdAt`, 日次のみ `jstDateKey` |
 
-読み取りは `LeaderboardRepository`、Riverpod は `allTimeLeaderboardProvider` / `todayDailyLeaderboardProvider` を参照。
+読み取りは `LeaderboardRepository`、Riverpod は `allTimeLeaderboardProvider` / `todayDailyLeaderboardProvider` を参照。履歴は現状 **書き込みのみ**（一覧 UI は未実装）。
+
+**ルール**で `leaderboard_history` も許可する必要があります（`firestore.rules` 参照）。
 
 ## パッケージ ID
 

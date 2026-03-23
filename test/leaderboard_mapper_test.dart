@@ -39,4 +39,28 @@ void main() {
     expect(m['score'], 99);
     expect(m['nickname'], 'hi');
   });
+
+  test('toFirestoreHistory: all_time', () {
+    final m = LeaderboardMapper.toFirestoreHistory(
+      kind: LeaderboardMapper.historyKindAllTime,
+      score: 5000,
+      nickname: 'Player',
+    );
+    expect(m['kind'], LeaderboardMapper.historyKindAllTime);
+    expect(m['score'], 5000);
+    expect(m['nickname'], 'Player');
+    expect(m['createdAt'], isA<FieldValue>());
+    expect(m.containsKey('jstDateKey'), isFalse);
+  });
+
+  test('toFirestoreHistory: daily with jstDateKey', () {
+    final m = LeaderboardMapper.toFirestoreHistory(
+      kind: LeaderboardMapper.historyKindDaily,
+      score: 300,
+      nickname: 'Day',
+      jstDateKey: '2025-03-24',
+    );
+    expect(m['kind'], LeaderboardMapper.historyKindDaily);
+    expect(m['jstDateKey'], '2025-03-24');
+  });
 }

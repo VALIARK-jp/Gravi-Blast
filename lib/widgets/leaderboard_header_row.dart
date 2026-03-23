@@ -24,6 +24,13 @@ class LeaderboardScoreHeader extends ConsumerWidget {
     final compact = w < 520;
     final topPad = compact ? 28.0 : 48.0;
     final scoreFont = compact ? 30.0 : 48.0;
+    final scoreDigits = currentScore.abs().toString().length;
+    // 桁が増えるほど字間を詰め、はみ出しを防ぐ
+    final scoreLetterSpacing = scoreDigits >= 6
+        ? 0.0
+        : scoreDigits >= 5
+            ? 0.5
+            : (compact ? 1.0 : 2.0);
 
     final titleStyle = theme.textTheme.labelSmall?.copyWith(
       color: Colors.black54,
@@ -68,16 +75,24 @@ class LeaderboardScoreHeader extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '$currentScore',
-                  style: TextStyle(
-                    fontSize: scoreFont,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
-                    letterSpacing: compact ? 1 : 2,
-                    height: 1.0,
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$currentScore',
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: scoreFont,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                        letterSpacing: scoreLetterSpacing,
+                        height: 1.0,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
                 SizedBox(height: compact ? 4 : 8),
                 Text(
@@ -158,10 +173,20 @@ class _SideBestPanel extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '${e.score}',
-                  style: scoreStyle,
-                  textAlign: textAlign,
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Text(
+                      '${e.score}',
+                      maxLines: 1,
+                      style: scoreStyle?.copyWith(
+                        letterSpacing: '${e.score}'.length >= 5 ? 0.0 : 0.3,
+                      ),
+                      textAlign: textAlign,
+                    ),
+                  ),
                 ),
               ],
             );

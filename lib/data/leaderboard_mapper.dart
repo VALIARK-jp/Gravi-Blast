@@ -52,6 +52,32 @@ abstract final class LeaderboardMapper {
     };
   }
 
+  // --- leaderboard_history コレクション（ベスト更新の履歴） ---
+
+  static const String fieldHistoryKind = 'kind';
+  static const String fieldHistoryJstDateKey = 'jstDateKey';
+  static const String fieldHistoryCreatedAt = 'createdAt';
+
+  /// [fieldHistoryKind] の値。
+  static const String historyKindAllTime = 'all_time';
+  static const String historyKindDaily = 'daily';
+
+  /// 履歴 1 件分の書き込み用 Map（`createdAt` に serverTimestamp）。
+  static Map<String, dynamic> toFirestoreHistory({
+    required String kind,
+    required int score,
+    required String nickname,
+    String? jstDateKey,
+  }) {
+    return {
+      fieldHistoryKind: kind,
+      fieldScore: score,
+      fieldNickname: _sanitizeNickname(nickname),
+      fieldHistoryCreatedAt: FieldValue.serverTimestamp(),
+      if (jstDateKey != null) fieldHistoryJstDateKey: jstDateKey,
+    };
+  }
+
   /// 表示・保存前のニックネーム整形（空白除去・長さ制限）。
   static String sanitizeNicknameForInput(String input) => _sanitizeNickname(input);
 

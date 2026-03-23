@@ -17,6 +17,9 @@ service cloud.firestore {
     match /leaderboard/{docId} {
       allow read, write: if true;
     }
+    match /leaderboard_history/{docId} {
+      allow read, write: if true;
+    }
   }
 }
 ```
@@ -32,6 +35,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /leaderboard/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /leaderboard_history/{docId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
