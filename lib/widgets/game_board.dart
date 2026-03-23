@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../models/block.dart';
@@ -29,28 +31,60 @@ class GameBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasSlideAnim = slideAnimations.isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    const outerRadius = 20.0;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(outerRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(outerRadius),
+            // メタリックブラック：左上ハイライト → 深黒（わずかに青み）
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF4A4D54),
+                Color(0xFF1E1F24),
+                Color(0xFF0A0A0C),
+                Color(0xFF12141A),
+              ],
+              stops: [0.0, 0.35, 0.72, 1.0],
+            ),
+            border: Border.all(
+              color: const Color(0xFF6E7178).withValues(alpha: 0.85),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.55),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+                spreadRadius: -1,
+              ),
+              BoxShadow(
+                color: const Color(0xFF8A9099).withValues(alpha: 0.22),
+                blurRadius: 6,
+                offset: const Offset(-2, -2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: SizedBox(
-        width: board.width * cellSize,
-        height: board.height * cellSize,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            _buildGrid(context),
-            if (hasSlideAnim) _buildAnimatedBlocks(context) else _buildStaticCells(context),
-          ],
+          child: FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: board.width * cellSize,
+              height: board.height * cellSize,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _buildGrid(context),
+                  if (hasSlideAnim) _buildAnimatedBlocks(context) else _buildStaticCells(context),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -79,16 +113,15 @@ class GameBoard extends StatelessWidget {
     final hasBlock = !hasSlideAnim && blockId != null;
 
     final block = blockId != null ? blocks.where((b) => b.blockId == blockId).firstOrNull : null;
-    final color = hasBlock ? _colorForBlock(blockId, block) : Colors.grey.shade800;
+    final color = hasBlock ? _colorForBlock(blockId, block) : null;
     final cell = SizedBox(
       width: cellSize,
       height: cellSize,
       child: Container(
         margin: EdgeInsets.all(cellSize * 0.04),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(4),
-        ),
+        decoration: hasBlock && color != null
+            ? _glassBlockDecoration(color, cellSize)
+            : _emptyGlassCellDecoration(cellSize),
       ),
     );
 
@@ -113,8 +146,8 @@ class GameBoard extends StatelessWidget {
                   child: Container(
                     margin: EdgeInsets.all(cellSize * 0.04),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(flashOpacity * 0.7),
-                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.white.withValues(alpha: flashOpacity * 0.75),
+                      borderRadius: BorderRadius.circular(cellSize * 0.18),
                     ),
                   ),
                 ),
@@ -194,15 +227,81 @@ class GameBoard extends StatelessWidget {
                     width: cellSize - cellSize * 0.08,
                     height: cellSize - cellSize * 0.08,
                     margin: EdgeInsets.all(cellSize * 0.04),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    decoration: _glassBlockDecoration(color, cellSize),
                   )
                 else
                   SizedBox(width: cellSize, height: cellSize),
             ],
           ),
+      ],
+    );
+  }
+
+  /// 空マス：暗いメタル上のすりガラス風タイル
+  BoxDecoration _emptyGlassCellDecoration(double cellSize) {
+    final r = cellSize * 0.18;
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(r),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF3A3C42).withValues(alpha: 0.65),
+          const Color(0xFF1A1B1F).withValues(alpha: 0.88),
+        ],
+      ),
+      border: Border.all(
+        color: const Color(0xFF8E9299).withValues(alpha: 0.35),
+        width: 0.85,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.45),
+          blurRadius: 3,
+          offset: const Offset(1, 1),
+        ),
+        BoxShadow(
+          color: const Color(0xFF6B7078).withValues(alpha: 0.15),
+          blurRadius: 2,
+          offset: const Offset(-1, -1),
+        ),
+      ],
+    );
+  }
+
+  /// ブロック：リキッドグラス風（半透明グラデ＋縁光＋発色シャドウ）
+  BoxDecoration _glassBlockDecoration(Color base, double cellSize) {
+    final r = cellSize * 0.2;
+    final light = Color.lerp(base, Colors.white, 0.42)!;
+    final deep = Color.lerp(base, Colors.black, 0.18)!;
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(r),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          light.withValues(alpha: 0.92),
+          base.withValues(alpha: 0.72),
+          deep.withValues(alpha: 0.58),
+        ],
+        stops: const [0.0, 0.48, 1.0],
+      ),
+      border: Border.all(
+        color: Colors.white.withValues(alpha: 0.52),
+        width: 1.1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: base.withValues(alpha: 0.42),
+          blurRadius: cellSize * 0.28,
+          offset: Offset(0, cellSize * 0.07),
+          spreadRadius: -1,
+        ),
+        BoxShadow(
+          color: Colors.white.withValues(alpha: 0.35),
+          blurRadius: 3,
+          offset: const Offset(-1.5, -1.5),
+        ),
       ],
     );
   }
